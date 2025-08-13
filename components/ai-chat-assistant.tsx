@@ -48,6 +48,8 @@ export default function AIChatAssistant({ products, onAddToCart }: AIChatAssista
   ])
   const [inputValue, setInputValue] = useState("")
   const [isTyping, setIsTyping] = useState(false)
+  const [keyboardVisible, setKeyboardVisible] = useState(false)
+  const [viewportHeight, setViewportHeight] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -72,9 +74,62 @@ export default function AIChatAssistant({ products, onAddToCart }: AIChatAssista
     scrollToBottom()
   }, [messages])
 
+  // Keyboard detection for mobile
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const handleResize = () => {
+      const currentHeight = window.innerHeight
+      const currentWidth = window.innerWidth
+      
+      // Only detect keyboard on mobile devices
+      if (currentWidth <= 768) {
+        if (viewportHeight === 0) {
+          // Initial viewport height
+          setViewportHeight(currentHeight)
+        } else if (currentHeight < viewportHeight - 150) {
+          // Keyboard is visible (viewport height reduced by more than 150px)
+          setKeyboardVisible(true)
+        } else if (currentHeight > viewportHeight - 100) {
+          // Keyboard is hidden (viewport height restored)
+          setKeyboardVisible(false)
+        }
+      }
+    }
+
+    // Set initial viewport height
+    setViewportHeight(window.innerHeight)
+    
+    window.addEventListener('resize', handleResize)
+    window.addEventListener('orientationchange', handleResize)
+    
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('orientationchange', handleResize)
+    }
+  }, [viewportHeight])
+
   useEffect(() => {
     if (isOpen && inputRef.current) {
-      inputRef.current.focus()
+      // Delay focus to prevent immediate viewport shift on mobile
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus()
+        }
+      }, 100)
+      
+      // Add body class to prevent scrolling on mobile
+      if (window.innerWidth <= 768) {
+        document.body.classList.add('chat-open')
+      }
+    } else {
+      // Remove body class when chat closes
+      document.body.classList.remove('chat-open')
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('chat-open')
     }
   }, [isOpen])
 
@@ -231,16 +286,27 @@ export default function AIChatAssistant({ products, onAddToCart }: AIChatAssista
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-24 left-2 right-2 z-50 md:bottom-24 md:right-6 md:left-auto md:transform-none md:w-96 lg:w-[28rem] xl:w-[32rem] bg-black/20 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 flex flex-col overflow-hidden" style={{ height: '70vh', maxHeight: '600px', minHeight: '400px' }}>
+        <div 
+          className={`fixed left-2 right-2 z-50 md:bottom-24 md:right-6 md:left-auto md:transform-none md:w-96 lg:w-[28rem] xl:w-[32rem] bg-black/20 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 flex flex-col overflow-hidden ${
+            keyboardVisible ? 'bottom-4' : 'bottom-20'
+          } ${keyboardVisible ? 'keyboard-visible' : ''}`}
+          style={{ 
+            height: keyboardVisible ? '30vh' : '35vh',
+            maxHeight: keyboardVisible ? '250px' : '300px',
+            minHeight: keyboardVisible ? '200px' : '250px'
+          }}
+        >
           {/* Header */}
-          <div className="flex items-center justify-between p-2 sm:p-3 md:p-4 border-b border-white/20 bg-gradient-to-r from-[#F7DD0F] to-yellow-400 rounded-t-2xl flex-shrink-0">
-            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-black rounded-full flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-[#F7DD0F]" />
+          <div className="flex items-center justify-between p-1 sm:p-1.5 md:p-2 lg:p-3 xl:p-4 border-b border-white/20 bg-gradient-to-r from-[#F7DD0F] to-yellow-400 rounded-2xl flex-shrink-0">
+            <div className="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3 min-w-0 flex-1">
+              <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-black rounded-full flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 text-[#F7DD0F]" />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="font-semibold text-black text-sm sm:text-base truncate">DopeTech AI</h3>
-                <p className="text-xs sm:text-sm text-black/70 truncate">Online • Ready to help</p>
+                <h3 className="font-semibold text-black text-xs sm:text-sm md:text-base truncate">DopeTech AI</h3>
+                <p className="text-xs text-black/70 truncate">
+                  {keyboardVisible ? 'Typing...' : 'Online • Ready to help'}
+                </p>
               </div>
             </div>
             <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
@@ -255,7 +321,7 @@ export default function AIChatAssistant({ products, onAddToCart }: AIChatAssista
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 space-y-2 sm:space-y-3 md:space-y-4 scrollbar-hide min-h-0">
+          <div className="flex-1 overflow-y-auto p-1 sm:p-1.5 md:p-2 lg:p-3 xl:p-4 space-y-1 sm:space-y-1.5 md:space-y-2 lg:space-y-3 xl:space-y-4 scrollbar-hide min-h-0">
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -327,24 +393,32 @@ export default function AIChatAssistant({ products, onAddToCart }: AIChatAssista
           </div>
 
           {/* Input */}
-          <div className="p-2 sm:p-3 md:p-4 border-t border-white/20 flex-shrink-0">
-            <div className="flex space-x-2 sm:space-x-3">
+          <div className="p-1 sm:p-1.5 md:p-2 lg:p-3 xl:p-4 border-t border-white/20 flex-shrink-0">
+            <div className="flex space-x-1.5 sm:space-x-2 md:space-x-3">
               <Input
                 ref={inputRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Ask me anything..."
-                className="flex-1 bg-black/20 backdrop-blur-md border border-white/20 focus:ring-2 focus:ring-[#F7DD0F] text-white placeholder-white/60 text-xs sm:text-sm md:text-base h-10 sm:h-11 md:h-12 lg:h-14 rounded-xl touch-manipulation"
-                style={{ minHeight: '40px' }}
+                placeholder={keyboardVisible ? "Type here..." : "Ask me anything..."}
+                className="flex-1 bg-black/20 backdrop-blur-md border border-white/20 focus:ring-2 focus:ring-[#F7DD0F] text-white placeholder-white/60 text-xs sm:text-sm md:text-base h-8 sm:h-9 md:h-10 lg:h-11 xl:h-12 rounded-xl touch-manipulation"
+                style={{ minHeight: '32px' }}
+                onFocus={() => {
+                  // Prevent viewport shift on mobile
+                  if (window.innerWidth <= 768) {
+                    setTimeout(() => {
+                      window.scrollTo(0, window.scrollY)
+                    }, 100)
+                  }
+                }}
               />
               <Button
                 onClick={handleSendMessage}
                 disabled={!inputValue.trim() || isTyping}
-                className="bg-[#F7DD0F] text-black hover:bg-[#F7DD0F]/90 disabled:opacity-50 h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 lg:h-14 lg:w-14 p-0 rounded-xl touch-manipulation"
-                style={{ minHeight: '40px', minWidth: '40px' }}
+                className="bg-[#F7DD0F] text-black hover:bg-[#F7DD0F]/90 disabled:opacity-50 h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 lg:h-11 lg:w-11 xl:h-12 xl:w-12 p-0 rounded-xl touch-manipulation"
+                style={{ minHeight: '32px', minWidth: '32px' }}
               >
-                <Send className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
+                <Send className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 lg:w-6 lg:h-6" />
               </Button>
             </div>
           </div>

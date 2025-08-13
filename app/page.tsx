@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import {
   Headphones,
   Keyboard,
@@ -24,15 +25,11 @@ import {
 // Removed CursorTracker (opt-in effect)
 import LazyAIChat from "@/components/lazy-ai-chat"
 import SEOOptimizer, { defaultStructuredData } from "@/components/seo-optimizer"
-import CheckoutModal from "@/components/checkout-modal"
+import GoogleFormsCheckout from "@/components/google-forms-checkout"
 import { allProducts, type Product } from "@/lib/products-data"
+import { useCart } from "@/contexts/cart-context"
 
 // Product type is now imported from lib/products-data
-
-// Cart item type definition
-interface CartItem extends Product {
-  quantity: number
-}
 
 // Products data imported from lib/products-data
 const products: Product[] = allProducts
@@ -81,9 +78,20 @@ const getProducts = (): Product[] => {
 }
 
 export default function DopeTechEcommerce() {
+  const router = useRouter()
   const [scrollY, setScrollY] = useState(0)
-  const [cart, setCart] = useState<CartItem[]>([])
-  const [cartOpen, setCartOpen] = useState(false)
+  const { 
+    cart, 
+    addToCart, 
+    updateQuantity, 
+    removeFromCart, 
+    getCartCount, 
+    getCartTotal, 
+    cartOpen, 
+    setCartOpen,
+    checkoutModalOpen,
+    setCheckoutModalOpen
+  } = useCart()
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [viewMode, setViewMode] = useState("grid")
   const [searchQuery, setSearchQuery] = useState("")
@@ -99,7 +107,6 @@ export default function DopeTechEcommerce() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [promoOrder, setPromoOrder] = useState<number[]>([])
   const [draggedPromoIndex, setDraggedPromoIndex] = useState<number | null>(null)
-  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false)
 
   const [userBehavior, setUserBehavior] = useState({
     viewedProducts: [] as number[],
@@ -371,25 +378,7 @@ export default function DopeTechEcommerce() {
 
 
 
-  const addToCart = useCallback((product: Product) => {
-    setCart(prev => {
-      const existing = prev.find(item => item.id === product.id)
-      if (existing) {
-        return prev.map(item => 
-          item.id === product.id 
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        )
-      }
-      return [...prev, { ...product, quantity: 1 }]
-    })
-    
-    // Track user behavior for AI recommendations
-    setUserBehavior(prev => ({
-      ...prev,
-      cartItems: [...prev.cartItems, product.id]
-    }))
-  }, [])
+
 
   const handleCategoryClick = (categoryId: string) => {
     setSelectedCategory(categoryId)
@@ -430,30 +419,16 @@ export default function DopeTechEcommerce() {
     }, 0)
   }
 
-  const removeFromCart = (productId: number) => {
-    setCart(prev => prev.filter(item => item.id !== productId))
-  }
-
-  const updateQuantity = (productId: number, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      removeFromCart(productId)
-      return
-    }
-    setCart(prev => prev.map(item => 
-      item.id === productId 
-        ? { ...item, quantity: newQuantity }
-        : item
-    ))
-  }
 
 
-
-  const getCartTotal = () => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0)
-  }
-
-  const getCartCount = () => {
-    return cart.reduce((count, item) => count + item.quantity, 0)
+  const handleAddToCartWithTracking = (product: Product) => {
+    addToCart(product, 1)
+    
+    // Track user behavior for AI recommendations
+    setUserBehavior(prev => ({
+      ...prev,
+      cartItems: [...prev.cartItems, product.id]
+    }))
   }
 
   const handleCheckout = () => {
@@ -463,6 +438,11 @@ export default function DopeTechEcommerce() {
     }
     
     setCheckoutModalOpen(true)
+  }
+
+  const handleCartReset = () => {
+    setCart([])
+    setCheckoutModalOpen(false)
   }
 
   const filteredProducts = useMemo(() => {
@@ -1218,7 +1198,7 @@ export default function DopeTechEcommerce() {
                             <h3 className="text-white font-bold text-sm sm:text-base md:text-lg mb-2 line-clamp-2">{product.name}</h3>
                             <p className="text-[#F7DD0F] font-bold text-sm sm:text-base md:text-lg mb-3">Rs {product.price}</p>
                             <button
-                              onClick={() => addToCart(product)}
+                              onClick={() => handleAddToCartWithTracking(product)}
                               className="bg-[#F7DD0F] text-black px-3 py-2 sm:px-4 sm:py-2.5 rounded-full font-semibold hover:bg-[#F7DD0F]/90 transition-all duration-200 hover:scale-105 shadow-lg text-xs sm:text-sm w-full"
                             >
                               Add to Cart
@@ -1246,7 +1226,7 @@ export default function DopeTechEcommerce() {
                             <h3 className="text-white font-bold text-sm sm:text-base md:text-lg mb-2 line-clamp-2">{product.name}</h3>
                             <p className="text-[#F7DD0F] font-bold text-sm sm:text-base md:text-lg mb-3">Rs {product.price}</p>
                             <button
-                              onClick={() => addToCart(product)}
+                              onClick={() => handleAddToCartWithTracking(product)}
                               className="bg-[#F7DD0F] text-black px-3 py-2 sm:px-4 sm:py-2.5 rounded-full font-semibold hover:bg-[#F7DD0F]/90 transition-all duration-200 hover:scale-105 shadow-lg text-xs sm:text-sm w-full"
                             >
                               Add to Cart
@@ -1282,7 +1262,10 @@ export default function DopeTechEcommerce() {
               <div className="grid grid-cols-2 gap-4 sm:gap-6 md:gap-8 max-w-5xl mx-auto">
                 {products.filter((p: any) => !p.hiddenOnHome).slice(0, 4).map((product, index) => (
                   <div key={`weekly-pick-${product.id}`} className="group relative animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                    <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-white/5 to-white/10 border border-white/10 backdrop-blur-sm shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 hover:-rotate-1">
+                    <div 
+                      className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-white/5 to-white/10 border-0 sm:border sm:border-white/10 backdrop-blur-sm shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 hover:-rotate-1 cursor-pointer"
+                      onClick={() => router.push(`/product/${product.id}`)}
+                    >
                       {/* 2x Bigger than marquee: w-80 h-80 sm:w-96 sm:h-96 md:w-[28rem] md:h-[28rem] lg:w-[32rem] lg:h-[32rem] */}
                       <div className="w-80 h-80 sm:w-96 sm:h-96 md:w-[28rem] md:h-[28rem] lg:w-[32rem] lg:h-[32rem] mx-auto">
                         <img
@@ -1301,13 +1284,20 @@ export default function DopeTechEcommerce() {
                           <h3 className="text-white font-bold text-lg sm:text-xl lg:text-2xl mb-2 line-clamp-2 leading-tight">{product.name}</h3>
                           <p className="text-[#F7DD0F] font-bold text-xl sm:text-2xl lg:text-3xl mb-3">Rs {product.price}</p>
                           <button
-                            onClick={() => addToCart(product)}
-                            className="bg-[#F7DD0F] text-black px-4 py-2 sm:px-5 sm:py-3 rounded-xl font-bold hover:bg-[#F7DD0F]/90 transition-all duration-300 hover:shadow-2xl w-full text-sm sm:text-base shadow-lg"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleAddToCartWithTracking(product)
+                            }}
+                            className="bg-[#F7DD0F] text-black px-4 py-2 sm:px-5 sm:py-3 rounded-xl font-bold hover:bg-[#F7DD0F]/90 transition-all duration-300 hover:shadow-2xl w-full text-sm sm:text-base shadow-lg z-10 relative cursor-pointer"
                           >
                             Add to Cart
                           </button>
                         </div>
                       </div>
+                      
+
+                      
+
                       
 
                       
@@ -1342,7 +1332,7 @@ export default function DopeTechEcommerce() {
                       className={`flex items-center space-x-2 px-3 sm:px-4 md:px-5 py-2 sm:py-3 md:py-4 rounded-full transition-all duration-200 cursor-pointer text-xs sm:text-sm md:text-base touch-target hover-scale hover-glow min-h-[36px] ${
                         selectedCategory === category.id
                           ? "bg-[#F7DD0F] text-black shadow-lg animate-pulse font-bold"
-                          : "bg-white/5 backdrop-blur-md border border-white/20 hover:bg-white/10 hover:border-white/30 font-medium shadow-lg"
+                          : "bg-white/5 backdrop-blur-md border-0 sm:border sm:border-white/20 hover:bg-white/10 sm:hover:border-white/30 font-medium shadow-lg"
                       }`}
                       aria-label={`Filter by ${category.name}`}
                     >
@@ -1372,7 +1362,7 @@ export default function DopeTechEcommerce() {
                       className={`flex items-center space-x-2 px-3 sm:px-4 md:px-5 py-2 sm:py-3 md:py-4 rounded-full transition-all duration-200 cursor-pointer text-xs sm:text-sm md:text-base touch-target hover-scale hover-glow min-h-[36px] ${
                         selectedCategory === category.id
                           ? "bg-[#F7DD0F] text-black shadow-lg animate-pulse font-bold"
-                          : "bg-white/5 backdrop-blur-md border border-white/20 hover:border-white/30 hover:bg-white/10 font-medium shadow-lg"
+                          : "bg-white/5 backdrop-blur-md border-0 sm:border sm:border-white/20 hover:bg-white/10 sm:hover:border-white/30 font-medium shadow-lg"
                       }`}
                       aria-label={`Filter by ${category.name}`}
                     >
@@ -1402,51 +1392,55 @@ export default function DopeTechEcommerce() {
             }`}>
             {filteredProducts.map((product, index) => (
               <div key={product.id} data-product-id={product.id} className="group animate-fade-in-up mobile-product-card hover-lift" style={{ animationDelay: `${index * 0.1}s` }}>
-                <div className="dopetech-card p-3 sm:p-6 h-full flex flex-col premium-card hover-scale rounded-2xl shadow-lg border border-gray-200/10 backdrop-blur-sm">
+                                <div 
+                                  className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer"
+                                  onClick={() => router.push(`/product/${product.id}`)}
+                                >
                   {/* Product Image with Enhanced Hover Effects */}
-                  <div className="relative image-container overflow-hidden rounded-xl aspect-square sm:aspect-auto mb-2 sm:mb-5">
+                  <div className="relative image-container overflow-hidden rounded-2xl aspect-square">
                       <img
                       src={product.image}
                       alt={product.name}
-                        className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-1 sm:static sm:w-full sm:h-56 md:h-64"
+                        className="w-full h-full object-cover object-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-1"
                         loading="lazy"
                         decoding="async"
                     />
-                    
-
                     
                     {/* Gradient Overlay on Hover */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent sm:opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                     {/* Mobile In-Stock badge at top-right */}
                     {product.inStock && (
-                      <div className="absolute top-2 right-2 sm:hidden px-2 py-1 rounded-full text-[10px] font-medium bg-green-500/30 text-green-100 border border-green-500/40">
+                      <div className="absolute top-2 right-2 sm:hidden px-2 py-1 rounded-full text-[10px] font-medium bg-green-500/20 backdrop-blur-md text-green-100 border border-green-500/30 shadow-lg">
                         In Stock
                       </div>
                     )}
 
-                    {/* Mobile overlay content */}
-                    <div className="absolute inset-x-0 bottom-0 p-2 sm:hidden">
-                      <h3 className="text-white font-semibold text-xs line-clamp-2 mb-1 leading-snug">{product.name}</h3>
+                    {/* Product overlay content - Mobile & Desktop */}
+                    <div className="absolute inset-x-0 bottom-0 p-2 sm:p-4 pointer-events-auto">
+                      <h3 className="text-white font-semibold text-xs sm:text-sm line-clamp-2 mb-1 leading-snug">{product.name}</h3>
                       <div className="flex items-center justify-between">
                         <div className="flex flex-col leading-tight">
-                          <span className="text-[#F7DD0F] font-bold text-sm">Rs {product.price}</span>
+                          <span className="text-[#F7DD0F] font-bold text-xs sm:text-sm">Rs {product.price}</span>
                           {product.originalPrice > product.price && (
-                            <span className="text-[10px] text-gray-300 line-through">Rs {product.originalPrice}</span>
+                            <span className="text-[10px] sm:text-xs text-gray-300 line-through">Rs {product.originalPrice}</span>
                           )}
                         </div>
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => addToCart(product)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              addToCart(product)
+                            }}
                             disabled={!product.inStock}
                             aria-label="Add to cart"
-                            className={`inline-flex items-center justify-center w-8 h-8 rounded-full shadow transition-transform active:scale-95 ${
+                            className={`inline-flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full shadow transition-transform active:scale-95 cursor-pointer z-10 relative ${
                               product.inStock
                                 ? "bg-[#F7DD0F] text-black hover:bg-[#F7DD0F]/90"
                                 : "bg-gray-500/40 text-gray-300 cursor-not-allowed"
                             }`}
                           >
-                            <Plus className="w-4 h-4" />
+                            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                           </button>
                         </div>
                       </div>
@@ -1454,7 +1448,7 @@ export default function DopeTechEcommerce() {
 
                     {/* Stock Status Badge */}
                     {!product.inStock && (
-                      <div className="absolute top-3 right-3 bg-red-500 text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-lg">
+                      <div className="absolute top-3 right-3 bg-red-500/20 backdrop-blur-md text-red-100 border border-red-500/30 px-3 py-1.5 rounded-full text-sm font-medium shadow-lg">
                         Out of Stock
                       </div>
                     )}
@@ -1465,85 +1459,11 @@ export default function DopeTechEcommerce() {
                         Quick View
                       </div>
                     </div>
-                  </div>
-
-                  {/* Product Info with Enhanced Typography */}
-                  <div className="hidden sm:flex flex-1 flex-col content">
-                    {/* Rating and Reviews removed */}
-                    <div className="hidden" />
-
-                    {/* Product Title */}
-                    <h3 className="font-bold text-base sm:text-lg mb-2 line-clamp-2 title leading-tight group-hover:text-[#F7DD0F] transition-colors duration-200">
-                      {product.name}
-                    </h3>
                     
-                    {/* Product Description (hidden on mobile) */}
-                    <p className="hidden sm:block text-sm text-gray-400 mb-3 line-clamp-2 leading-relaxed">
-                      {product.description}
-                    </p>
 
-                    {/* Enhanced Features Display (hidden on mobile) */}
-                    <div className="hidden sm:flex flex-wrap gap-1.5 sm:gap-2 mb-4">
-                      {product.features.slice(0, 2).map((feature, index) => (
-                        <span
-                          key={index}
-                          className="text-xs sm:text-sm bg-[#F7DD0F]/20 text-[#F7DD0F] px-2.5 py-1 rounded-full font-medium border border-[#F7DD0F]/30"
-                        >
-                          {feature}
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Enhanced Price and Action Section */}
-                    <div className="mt-auto">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex flex-col leading-tight">
-                          <span className="text-lg sm:text-xl font-bold price text-[#F7DD0F]">Rs {product.price}</span>
-                          {product.originalPrice > product.price && (
-                            <span className="text-xs sm:text-sm text-gray-500 line-through">
-                              Rs {product.originalPrice}
-                            </span>
-                          )}
-                        </div>
-                        {/* Mobile discount removed as requested */}
-                        
-                        {/* Stock Indicator (visible on mobile too) */}
-                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          product.inStock 
-                            ? "bg-green-500/20 text-green-400 border border-green-500/30" 
-                            : "bg-red-500/20 text-red-400 border border-red-500/30"
-                        }`}>
-                          {product.inStock ? "In Stock" : "Out of Stock"}
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => addToCart(product)}
-                        disabled={!product.inStock}
-                        className={`hidden sm:block w-full py-3 sm:py-4 px-4 rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 touch-target button min-h-[48px] relative overflow-hidden group ${
-                          product.inStock
-                            ? "bg-[#F7DD0F] text-black hover:bg-[#F7DD0F]/90 hover:scale-105 shadow-lg active:scale-95 active:shadow-xl hover:shadow-[#F7DD0F]/25"
-                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        }`}
-                      >
-                        <span className="relative z-10 flex items-center justify-center">
-                          {product.inStock ? (
-                            <>
-                              <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                              Add to Cart
-                            </>
-                          ) : (
-                            "Out of Stock"
-                          )}
-                        </span>
-                        
-                        {/* Button Hover Effect */}
-                        {product.inStock && (
-                          <div className="absolute inset-0 bg-gradient-to-r from-[#F7DD0F] to-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        )}
-                      </button>
-                    </div>
                   </div>
+
+
                 </div>
               </div>
             ))}
@@ -1753,11 +1673,12 @@ export default function DopeTechEcommerce() {
       )}
 
       {/* Checkout Modal */}
-      <CheckoutModal
+      <GoogleFormsCheckout
         isOpen={checkoutModalOpen}
         onClose={() => setCheckoutModalOpen(false)}
         cart={cart}
         total={getCartTotal()}
+        onCartReset={handleCartReset}
       />
     </div>
   )

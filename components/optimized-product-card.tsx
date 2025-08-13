@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Plus, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 
 interface Product {
   id: number
@@ -37,6 +38,7 @@ export default function OptimizedProductCard({
   const [isHovered, setIsHovered] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
+  const router = useRouter()
 
   // Intersection Observer for lazy loading
   useEffect(() => {
@@ -81,12 +83,17 @@ export default function OptimizedProductCard({
     onWishlist?.(product)
   }
 
+  const handleCardClick = () => {
+    router.push(`/product/${product.id}`)
+  }
+
   return (
     <div
       ref={cardRef}
-      className="group relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 product-card"
+      className="group relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 product-card cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={handleCardClick}
     >
       {/* Discount Badge */}
       {product.discount > 0 && (

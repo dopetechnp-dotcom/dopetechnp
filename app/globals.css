@@ -1634,3 +1634,48 @@ main::-webkit-scrollbar {
     transform: scale(1);
   }
 }
+
+/* AI Chat Mobile Fixes */
+.ai-chat-assistant {
+  position: fixed !important;
+  z-index: 9999;
+}
+
+/* Prevent viewport shift on mobile when keyboard appears */
+@media (max-width: 768px) {
+  .ai-chat-assistant {
+    position: fixed !important;
+    bottom: 1.5rem !important;
+    right: 1rem !important;
+  }
+  
+  /* Ensure chat window stays in place on mobile */
+  .ai-chat-assistant + div {
+    position: fixed !important;
+    bottom: 5rem !important;
+    left: 0.5rem !important;
+    right: 0.5rem !important;
+    max-height: 35vh !important;
+    height: auto !important;
+    transition: all 0.3s ease;
+  }
+  
+  /* Keyboard visible state */
+  .ai-chat-assistant + div.keyboard-visible {
+    bottom: 1rem !important;
+    max-height: 30vh !important;
+    height: auto !important;
+  }
+}
+
+/* Prevent body scroll when chat is open on mobile */
+body.chat-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+/* Ensure input doesn't cause viewport shift */
+.ai-chat-assistant input:focus {
+  transform: none !important;
+}
