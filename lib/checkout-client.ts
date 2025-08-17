@@ -20,7 +20,7 @@ interface CheckoutData {
   }>
   total: number
   paymentOption: 'full' | 'deposit'
-  receiptFile?: string | null // base64 encoded file
+  receiptFile?: string // base64 encoded file
   receiptFileName?: string | null
 }
 
@@ -33,7 +33,7 @@ export const checkoutClient = {
     message: string
   }> {
     try {
-      console.log('📋 Submitting order via API route:', {
+      console.log('📋 Submitting order via Netlify Function:', {
         orderId: orderData.orderId,
         customerName: orderData.customerInfo.fullName,
         total: orderData.total,
@@ -45,8 +45,8 @@ export const checkoutClient = {
         throw new Error('Missing required fields')
       }
 
-      // Submit order to API route
-      const response = await fetch('/api/supabase-checkout', {
+      // Submit order to Netlify Function
+      const response = await fetch('/.netlify/functions/supabase-checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,7 +61,7 @@ export const checkoutClient = {
 
       const result = await response.json()
       
-      console.log('✅ Order submitted successfully via API:', result)
+      console.log('✅ Order submitted successfully via Netlify Function:', result)
       
       return {
         success: true,
