@@ -21,7 +21,9 @@ console.log('🔧 Environment check:', {
   hasServiceKey: !!supabaseServiceKey,
   nodeEnv: process.env.NODE_ENV,
   hasResendKey: !!process.env.RESEND_API_KEY,
-  hasAdminEmail: !!process.env.ADMIN_EMAIL
+  hasAdminEmail: !!process.env.ADMIN_EMAIL,
+  resendKeyLength: process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.length : 0,
+  adminEmail: process.env.ADMIN_EMAIL || 'Not set'
 })
 
 // Create Supabase client
@@ -35,8 +37,13 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 // Initialize Resend for email notifications
 let resend = null
 if (process.env.RESEND_API_KEY) {
-  resend = new Resend(process.env.RESEND_API_KEY)
-  console.log('✅ Resend email service initialized')
+  try {
+    resend = new Resend(process.env.RESEND_API_KEY)
+    console.log('✅ Resend email service initialized successfully')
+  } catch (error) {
+    console.error('❌ Error initializing Resend:', error)
+    resend = null
+  }
 } else {
   console.log('⚠️ RESEND_API_KEY not found - email notifications will be disabled')
 }
@@ -44,6 +51,8 @@ if (process.env.RESEND_API_KEY) {
 // Email service functions
 const emailService = {
   async sendAdminNotification(orderData, orderDbId) {
+    console.log('📧 Starting admin notification email process...')
+    
     if (!resend) {
       console.log('⚠️ Resend not configured - skipping admin email')
       return { success: false, error: 'Email service not configured' }
@@ -52,9 +61,13 @@ const emailService = {
     try {
       const adminEmail = process.env.ADMIN_EMAIL || 'dopetechnp@gmail.com'
       console.log('📧 Sending admin notification to:', adminEmail)
+      console.log('📧 Order ID:', orderData.orderId)
+      console.log('📧 Database ID:', orderDbId)
 
       const emailHtml = this.generateAdminEmailHTML(orderData, orderDbId)
+      console.log('📧 Email HTML generated successfully')
 
+      console.log('📧 Attempting to send email via Resend...')
       const { data, error } = await resend.emails.send({
         from: 'DopeTech GMK <onboarding@resend.dev>',
         to: [adminEmail],
@@ -65,13 +78,17 @@ const emailService = {
 
       if (error) {
         console.error('❌ Error sending admin email:', error)
+        console.error('❌ Error details:', JSON.stringify(error, null, 2))
         return { success: false, error: error.message }
       }
 
       console.log('✅ Admin notification email sent successfully')
+      console.log('📧 Email ID:', data?.id)
+      console.log('📧 Sent to:', adminEmail)
       return { success: true, emailId: data?.id }
     } catch (error) {
       console.error('❌ Exception sending admin email:', error)
+      console.error('❌ Exception stack:', error.stack)
       return { success: false, error: error.message }
     }
   },
@@ -540,12 +557,14 @@ exports.handler = async (event, context) => {
       
       if (emailResult.success) {
         console.log('✅ Admin notification email sent successfully')
+        console.log('📧 Email ID:', emailResult.emailId)
       } else {
         console.error('❌ Failed to send admin notification email:', emailResult.error)
         // Don't fail the order if email fails
       }
     } catch (emailError) {
       console.error('❌ Error sending admin notification email:', emailError)
+      console.error('❌ Email error stack:', emailError.stack)
       // Don't fail the order if email fails
     }
 
