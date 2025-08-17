@@ -6,18 +6,25 @@ const __dirname = path.dirname(__filename)
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable static export for Netlify deployment
-  output: 'export',
-  trailingSlash: true,
+  // Remove static export for Vercel deployment
+  // output: 'export', // Commented out for Vercel
+  // trailingSlash: true, // Not needed for Vercel
   images: {
-    unoptimized: true,
+    unoptimized: false, // Enable image optimization for Vercel
+    formats: ['image/webp', 'image/avif'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 31536000, // 1 year cache
+    loader: 'default',
+    path: '',
   },
-  // Ensure proper routing
-  skipTrailingSlashRedirect: true,
-  skipMiddlewareUrlNormalize: true,
+  // Ensure proper routing for Vercel
+  // skipTrailingSlashRedirect: true, // Not needed for Vercel
+  // skipMiddlewareUrlNormalize: true, // Not needed for Vercel
   // Exclude API routes from static export
   experimental: {
     excludeDefaultMomentLocales: false,
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -29,20 +36,7 @@ const nextConfig = {
   generateBuildId: async () => {
     return 'build-' + Date.now()
   },
-  images: {
-    formats: ['image/webp', 'image/avif'],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    minimumCacheTTL: 31536000, // 1 year cache
-    unoptimized: true,
-    loader: 'default',
-    path: '',
-  },
   // Configure build behavior - removed problematic experimental features
-  experimental: {
-    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
-    // Removed optimizeCss and other problematic features
-  },
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },

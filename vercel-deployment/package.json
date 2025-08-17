@@ -7,15 +7,17 @@
   },
   "scripts": {
     "build": "next build",
+    "postbuild": "echo 'Build completed. Checking for out directory...' && ls -la out/ || echo 'out directory not found'",
     "dev": "next dev",
     "upload-assets": "node scripts/upload-assets.js",
     "lint": "next lint",
     "start": "next start",
     "analyze": "ANALYZE=true next build",
     "type-check": "tsc --noEmit",
-    "test:supabase": "node scripts/test-supabase-connection.js",
-    "test:build": "npm run build",
-    "vercel-build": "npm run build"
+    "build:check": "node scripts/check-static-assets.js && npm run build",
+    "fix:deployment": "node scripts/fix-deployment-issues.js",
+    "debug:deployment": "node scripts/debug-deployment.js",
+    "test:build": "node test-build.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

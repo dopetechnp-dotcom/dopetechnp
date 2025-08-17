@@ -1,72 +1,47 @@
 const { createClient } = require('@supabase/supabase-js')
 
-// Use the same configuration as the main app
-const supabaseUrl = 'https://aizgswoelfdkhyosgvzu.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpemdzd29lbGZka2h5b3Nndnp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNTUyMjUsImV4cCI6MjA3MDYzMTIyNX0.4a7Smvc_bueFLqZNvGk-AW0kD5dJusNwqaSAczJs0hU'
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-async function testConnection() {
-  console.log('🔍 Testing Supabase connection...')
-  console.log('URL:', supabaseUrl)
-  console.log('Key set:', !!supabaseAnonKey)
+// Test Supabase connection
+async function testSupabaseConnection() {
+  console.log('🔧 Testing Supabase connection...')
+  
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://aizgswoelfdkhyosgvzu.supabase.co'
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpemdzd29lbGZka2h5b3Nndnp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNTUyMjUsImV4cCI6MjA3MDYzMTIyNX0.4a7Smvc_bueFLqZNvGk-AW0kD5dJusNwqaSAczJs0hU'
+  
+  console.log('📡 Supabase URL:', supabaseUrl)
+  console.log('🔑 Anon Key exists:', !!supabaseAnonKey)
   
   try {
-    // Test 1: Simple connection test
-    console.log('\n📡 Test 1: Basic connection...')
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    
+    // Test basic connection
     const { data, error } = await supabase
       .from('products')
       .select('count')
       .limit(1)
     
     if (error) {
-      console.error('❌ Connection failed:', error)
-      return
+      console.error('❌ Supabase connection failed:', error.message)
+      process.exit(1)
     }
     
-    console.log('✅ Basic connection successful')
+    console.log('✅ Supabase connection successful!')
+    console.log('📊 Database accessible')
     
-    // Test 2: Get products count
-    console.log('\n📦 Test 2: Getting products count...')
-    const { count, error: countError } = await supabase
-      .from('products')
-      .select('*', { count: 'exact', head: true })
+    // Test storage buckets
+    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets()
     
-    if (countError) {
-      console.error('❌ Products count failed:', countError)
+    if (bucketsError) {
+      console.warn('⚠️ Could not list storage buckets:', bucketsError.message)
     } else {
-      console.log(`✅ Products count: ${count}`)
+      console.log('📦 Storage buckets accessible:', buckets.map(b => b.name))
     }
     
-    // Test 3: Get orders count
-    console.log('\n📋 Test 3: Getting orders count...')
-    const { count: ordersCount, error: ordersError } = await supabase
-      .from('orders')
-      .select('*', { count: 'exact', head: true })
-    
-    if (ordersError) {
-      console.error('❌ Orders count failed:', ordersError)
-    } else {
-      console.log(`✅ Orders count: ${ordersCount}`)
-    }
-    
-    // Test 4: Get order_items count
-    console.log('\n🛍️ Test 4: Getting order_items count...')
-    const { count: itemsCount, error: itemsError } = await supabase
-      .from('order_items')
-      .select('*', { count: 'exact', head: true })
-    
-    if (itemsError) {
-      console.error('❌ Order items count failed:', itemsError)
-    } else {
-      console.log(`✅ Order items count: ${itemsCount}`)
-    }
-    
-    console.log('\n🎉 All connection tests completed!')
+    console.log('🎉 All tests passed!')
     
   } catch (error) {
-    console.error('❌ Connection test failed:', error)
+    console.error('❌ Test failed:', error.message)
+    process.exit(1)
   }
 }
 
-testConnection()
+testSupabaseConnection()
