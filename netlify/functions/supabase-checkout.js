@@ -1,9 +1,20 @@
 const { createClient } = require('@supabase/supabase-js')
 const nodemailer = require('nodemailer')
 
-// Initialize Supabase client
+// Initialize Supabase client with better error handling
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+console.log('🔧 Environment check:', {
+  hasSupabaseUrl: !!supabaseUrl,
+  hasServiceKey: !!supabaseServiceKey,
+  nodeEnv: process.env.NODE_ENV
+})
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Missing required environment variables')
+  throw new Error('Missing Supabase configuration')
+}
 
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
@@ -16,6 +27,15 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 const emailService = {
   async sendOrderEmails(orderData, orderDbId, adminEmail) {
     try {
+      // Check if email credentials are available
+      if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        console.warn('⚠️ Email credentials not configured, skipping email sending')
+        return {
+          customerEmail: { success: false, error: 'Email not configured' },
+          adminEmail: { success: false, error: 'Email not configured' }
+        }
+      }
+
       // Configure email transporter
       const transporter = nodemailer.createTransporter({
         service: 'gmail',
@@ -98,6 +118,8 @@ const emailService = {
 }
 
 exports.handler = async (event, context) => {
+  console.log('🚀 Function invoked with method:', event.httpMethod)
+  
   // Enable CORS
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -107,6 +129,7 @@ exports.handler = async (event, context) => {
 
   // Handle preflight requests
   if (event.httpMethod === 'OPTIONS') {
+    console.log('✅ Handling preflight request')
     return {
       statusCode: 200,
       headers,
@@ -116,6 +139,7 @@ exports.handler = async (event, context) => {
 
   // Only allow POST requests
   if (event.httpMethod !== 'POST') {
+    console.log('❌ Method not allowed:', event.httpMethod)
     return {
       statusCode: 405,
       headers,
@@ -124,18 +148,20 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    console.log('📥 Parsing request body...')
     const body = JSON.parse(event.body)
     
     console.log('📋 Received Supabase checkout data:', {
       orderId: body.orderId,
-      customerName: body.customerInfo.fullName,
+      customerName: body.customerInfo?.fullName,
       total: body.total,
       hasReceipt: !!body.receiptFile,
       paymentOption: body.paymentOption
     })
 
     // Validate required fields
-    if (!body.orderId || !body.customerInfo.fullName || !body.customerInfo.email) {
+    if (!body.orderId || !body.customerInfo?.fullName || !body.customerInfo?.email) {
+      console.error('❌ Missing required fields')
       return {
         statusCode: 400,
         headers,
@@ -218,7 +244,7 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 500,
         headers,
-        body: JSON.stringify({ error: 'Failed to create order' })
+        body: JSON.stringify({ error: 'Failed to create order: ' + orderError.message })
       }
     }
 
@@ -242,7 +268,7 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 500,
         headers,
-        body: JSON.stringify({ error: 'Failed to add order items' })
+        body: JSON.stringify({ error: 'Failed to add order items: ' + itemsError.message })
       }
     }
 
@@ -258,6 +284,7 @@ exports.handler = async (event, context) => {
       // Don't fail the order if email fails
     }
 
+    console.log('🎉 Order processing completed successfully')
     return {
       statusCode: 200,
       headers,
@@ -275,7 +302,10 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Internal server error' })
+      body: JSON.stringify({ 
+        error: 'Internal server error',
+        details: error.message 
+      })
     }
   }
 }
