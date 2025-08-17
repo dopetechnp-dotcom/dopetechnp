@@ -33,7 +33,7 @@ export const checkoutClient = {
     message: string
   }> {
     try {
-      console.log('📋 Submitting order via Netlify Function:', {
+      console.log('📋 Submitting order via Vercel API:', {
         orderId: orderData.orderId,
         customerName: orderData.customerInfo.fullName,
         total: orderData.total,
@@ -45,8 +45,8 @@ export const checkoutClient = {
         throw new Error('Missing required fields')
       }
 
-      // Submit order to Netlify Function
-      const response = await fetch('/.netlify/functions/supabase-checkout', {
+      // Submit order to Vercel API route
+      const response = await fetch('/api/supabase-checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,7 +61,7 @@ export const checkoutClient = {
 
       const result = await response.json()
       
-      console.log('✅ Order submitted successfully via Netlify Function:', result)
+      console.log('✅ Order submitted successfully via Vercel API:', result)
       
       return {
         success: true,
