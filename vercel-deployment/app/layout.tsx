@@ -15,7 +15,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://dopetech-nepal.netlify.app'),
+  metadataBase: new URL('https://dopetechnp-aflazuh1u-dopetechnps-projects.vercel.app'),
   title: "DopeTech Nepal - Premium Tech Gear",
   description: "Premium tech gear from DopeTech Nepal. Mechanical keyboards, gaming mice, wireless headphones, and more. Your setup, perfected.",
   keywords: "tech gear, mechanical keyboard, gaming mouse, wireless headphones, Nepal, DopeTech, gaming peripherals, RGB keyboard, wireless mouse",
