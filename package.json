@@ -14,6 +14,7 @@
     "analyze": "ANALYZE=true next build",
     "type-check": "tsc --noEmit",
     "test:supabase": "node scripts/test-supabase-connection.js",
+    "test:email": "node scripts/test-email-setup.js",
     "test:build": "npm run build",
     "vercel-build": "npm run build"
   },

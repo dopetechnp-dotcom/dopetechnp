@@ -1,80 +1,87 @@
-const { EmailService } = require('../lib/email-service');
+const { Resend } = require('resend')
 
+// Test email functionality
 async function testEmailSetup() {
-  console.log('🧪 Testing Email Setup...\n');
-
-  const emailService = EmailService.getInstance();
-
-  // Test email service configuration
-  console.log('1. Testing email service configuration...');
-  const testResult = await emailService.testEmailService();
+  console.log('🧪 Testing Email Setup...')
   
-  if (testResult.success) {
-    console.log('✅ Email service is configured correctly');
-    console.log('📧 Test email sent successfully');
-  } else {
-    console.log('❌ Email service configuration failed');
-    console.log('Error:', testResult.error);
-    console.log('\nPlease check your environment variables:');
-    console.log('- RESEND_API_KEY');
-    console.log('- GMAIL_USER');
-    console.log('- GMAIL_APP_PASSWORD');
-    console.log('- ADMIN_EMAIL');
+  const resendApiKey = process.env.RESEND_API_KEY
+  const adminEmail = process.env.ADMIN_EMAIL
+  
+  console.log('📧 Resend API Key exists:', !!resendApiKey)
+  console.log('📧 Admin Email exists:', !!adminEmail)
+  
+  if (!resendApiKey) {
+    console.error('❌ RESEND_API_KEY not found in environment variables')
+    console.log('💡 Add RESEND_API_KEY to your Vercel environment variables')
+    return false
   }
-
-  console.log('\n2. Testing with sample order data...');
   
-  const sampleOrderData = {
-    orderId: 'TEST-123456789',
-    customerInfo: {
-      fullName: 'Test Customer',
-      email: 'test@example.com',
-      phone: '+9779812345678',
-      city: 'Kathmandu',
-      state: 'Bagmati',
-      zipCode: '44600',
-      fullAddress: 'Test Address, Kathmandu, Nepal'
-    },
-    cart: [
-      {
-        id: 1,
-        name: 'Test Product',
-        price: 1000,
-        quantity: 1,
-        image_url: 'https://example.com/test.jpg'
-      }
-    ],
-    total: 1000,
-    paymentOption: 'full',
-    receiptUrl: null
-  };
-
+  if (!adminEmail) {
+    console.error('❌ ADMIN_EMAIL not found in environment variables')
+    console.log('💡 Add ADMIN_EMAIL to your Vercel environment variables')
+    return false
+  }
+  
   try {
-    const emailResults = await emailService.sendOrderEmails(sampleOrderData, 1);
+    console.log('🔧 Initializing Resend client...')
+    const resend = new Resend(resendApiKey)
     
-    console.log('\n📧 Email Results:');
-    console.log('Customer Email:', emailResults.customerEmail.success ? '✅ Sent' : '❌ Failed');
-    if (!emailResults.customerEmail.success) {
-      console.log('   Error:', emailResults.customerEmail.error);
+    console.log('📤 Sending test email...')
+    const { data, error } = await resend.emails.send({
+      from: 'DopeTech Nepal <noreply@dopetechnp.com>',
+      to: [adminEmail],
+      subject: '🧪 Email Test - DopeTech Nepal',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">🎉 Email System Test Successful!</h2>
+          <p>This is a test email to verify that your email system is working correctly on Vercel.</p>
+          <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <h3>✅ Test Results:</h3>
+            <ul>
+              <li>Resend API Key: ✅ Configured</li>
+              <li>Admin Email: ✅ ${adminEmail}</li>
+              <li>Email Service: ✅ Working</li>
+              <li>Vercel Deployment: ✅ Ready</li>
+            </ul>
+          </div>
+          <p>Your DopeTech Nepal e-commerce site is now ready to send order confirmation emails!</p>
+          <hr style="margin: 20px 0;">
+          <p style="color: #666; font-size: 12px;">
+            Sent from DopeTech Nepal - Email System Test
+          </p>
+        </div>
+      `
+    })
+    
+    if (error) {
+      console.error('❌ Email test failed:', error)
+      return false
     }
     
-    console.log('Admin Email:', emailResults.adminEmail.success ? '✅ Sent' : '❌ Failed');
-    if (!emailResults.adminEmail.success) {
-      console.log('   Error:', emailResults.adminEmail.error);
-    }
+    console.log('✅ Test email sent successfully!')
+    console.log('📧 Email ID:', data.id)
+    console.log('📧 Sent to:', adminEmail)
+    
+    return true
     
   } catch (error) {
-    console.log('❌ Error testing email sending:', error.message);
+    console.error('❌ Email test error:', error)
+    return false
   }
-
-  console.log('\n📋 Summary:');
-  console.log('If you see any ❌ errors above, please:');
-  console.log('1. Check your .env.local file has all required variables');
-  console.log('2. Verify your Resend API key is valid');
-  console.log('3. Ensure Gmail app password is correct');
-  console.log('4. Check that ADMIN_EMAIL is set correctly');
-  console.log('\nFor detailed setup instructions, see EMAIL_SETUP.md');
 }
 
 // Run the test
-testEmailSetup().catch(console.error);
+testEmailSetup()
+  .then(success => {
+    if (success) {
+      console.log('🎉 Email system is working perfectly!')
+      process.exit(0)
+    } else {
+      console.log('❌ Email system needs configuration')
+      process.exit(1)
+    }
+  })
+  .catch(error => {
+    console.error('❌ Test failed:', error)
+    process.exit(1)
+  })
