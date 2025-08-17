@@ -4,7 +4,8 @@
   "description": "Netlify functions for DopeTech GMK",
   "main": "supabase-checkout.js",
   "dependencies": {
-    "@supabase/supabase-js": "^2.55.0"
+    "@supabase/supabase-js": "^2.55.0",
+    "resend": "^6.0.1"
   },
   "engines": {
     "node": "18.x"
