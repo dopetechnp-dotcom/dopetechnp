@@ -427,23 +427,48 @@ export default function DopeTechAdmin() {
   }
 
   const handleDeleteProduct = async (productId: number) => {
-    if (confirm("Are you sure you want to delete this product?")) {
+    if (confirm("Are you sure you want to delete this product? This action cannot be undone.")) {
       try {
         // First, check if product has related order items
         const { data: orderItems, error: checkError } = await supabase
           .from('order_items')
-          .select('id')
+          .select('id, order_id')
           .eq('product_id', productId)
 
         if (checkError) {
           console.error('Error checking order items:', checkError)
-        }
-
-        if (orderItems && orderItems.length > 0) {
-          alert(`Cannot delete product: It has ${orderItems.length} related order(s). Please remove the orders first.`)
+          alert('Error checking related data. Please try again.')
           return
         }
 
+        if (orderItems && orderItems.length > 0) {
+          const uniqueOrders = [...new Set(orderItems.map(item => item.order_id))]
+          const shouldDelete = confirm(
+            `This product has ${orderItems.length} order item(s) in ${uniqueOrders.length} order(s).\n\n` +
+            `Deleting this product will also remove these order items.\n\n` +
+            `Are you sure you want to continue?`
+          )
+          
+          if (!shouldDelete) {
+            return
+          }
+
+          // Delete related order items first
+          const { error: deleteOrderItemsError } = await supabase
+            .from('order_items')
+            .delete()
+            .eq('product_id', productId)
+
+          if (deleteOrderItemsError) {
+            console.error('Error deleting order items:', deleteOrderItemsError)
+            alert('Failed to delete related order items. Product deletion cancelled.')
+            return
+          }
+
+          console.log(`Deleted ${orderItems.length} order items for product ${productId}`)
+        }
+
+        // Now delete the product
         const { error } = await supabase
           .from('products')
           .delete()
