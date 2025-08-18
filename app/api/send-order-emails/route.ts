@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { emailService } from '@/lib/email-service'
 
+// Required for static export
+export const dynamic = 'force-dynamic'
+
 interface OrderEmailData {
   orderId: string
   orderDbId: number
