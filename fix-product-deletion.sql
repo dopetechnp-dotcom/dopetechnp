@@ -19,7 +19,7 @@ COMMENT ON CONSTRAINT order_items_product_id_fkey ON order_items IS 'Cascade del
 SELECT 
     tc.table_name, 
     kcu.column_name, 
-    ccu.table_name AS foreign_table_name,
+    ccu.tab--le_name AS foreign_table_name,
     ccu.column_name AS foreign_column_name,
     rc.delete_rule
 FROM 

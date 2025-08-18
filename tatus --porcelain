@@ -1,4 +1,1 @@
-[33m02b1d02[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Fix build: Remove API routes for static export compatibility
-[33ma5f96bc[m Fix Netlify deployment: Enable static export and convert API routes to Netlify Functions
-[33m6d43bbb[m Clean up temporary files and prepare for deployment
-[33m82ded82[m Initial commit: DopeTech Nepal e-commerce site with QR code management
+* [32mmain[m
