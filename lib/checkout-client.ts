@@ -63,6 +63,35 @@ export const checkoutClient = {
       
       console.log('✅ Order submitted successfully via Vercel API:', result)
       
+      // Send email notification via Netlify function
+      try {
+        console.log('📧 Sending email notification...')
+        const emailResponse = await fetch('/.netlify/functions/send-order-emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            orderId: orderData.orderId,
+            orderDbId: result.orderDbId,
+            customerInfo: orderData.customerInfo,
+            cart: orderData.cart,
+            total: orderData.total,
+            paymentOption: orderData.paymentOption,
+            receiptUrl: result.receiptUrl
+          }),
+        })
+
+        if (emailResponse.ok) {
+          const emailResult = await emailResponse.json()
+          console.log('✅ Email notification sent successfully:', emailResult)
+        } else {
+          console.warn('⚠️ Email notification failed:', emailResponse.status)
+        }
+      } catch (emailError) {
+        console.warn('⚠️ Email notification error:', emailError)
+      }
+      
       return {
         success: true,
         orderId: orderData.orderId,
