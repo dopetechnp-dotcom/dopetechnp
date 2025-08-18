@@ -6,11 +6,12 @@ const __dirname = path.dirname(__filename)
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Remove static export for Vercel deployment
-  // output: 'export', // Commented out for Vercel
-  // trailingSlash: true, // Not needed for Vercel
+  // Configure for Netlify deployment with static export
+  output: 'export',
+  trailingSlash: true,
+  distDir: 'out',
   images: {
-    unoptimized: false, // Enable image optimization for Vercel
+    unoptimized: true, // Required for static export
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
