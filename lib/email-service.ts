@@ -1,5 +1,9 @@
 import { Resend } from 'resend'
 import nodemailer from 'nodemailer'
+import dotenv from 'dotenv'
+
+// Ensure environment variables are loaded
+dotenv.config()
 
 interface OrderData {
   orderId: string
@@ -36,6 +40,9 @@ export class EmailService {
   private gmailTransporter: nodemailer.Transporter | null
 
   private constructor() {
+    // Ensure environment variables are loaded
+    dotenv.config()
+    
     // Debug environment variables for Netlify
     console.log('🔧 Email Service Initialization:')
     console.log('📧 RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY)
@@ -49,7 +56,7 @@ export class EmailService {
     const apiKey = process.env.RESEND_API_KEY
     if (!apiKey) {
       console.warn('⚠️ RESEND_API_KEY not found - email service will be disabled')
-      console.warn('💡 Add RESEND_API_KEY to your Netlify environment variables')
+      console.warn('💡 Add RESEND_API_KEY to your environment variables (.env.local for local development)')
       this.resend = null as any
     } else {
       console.log('✅ Resend API key found, initializing Resend client...')
@@ -62,7 +69,7 @@ export class EmailService {
     
     if (!gmailUser || !gmailPass) {
       console.warn('⚠️ Gmail credentials not found - customer emails will use Resend')
-      console.warn('💡 Add GMAIL_USER and GMAIL_APP_PASSWORD to your Netlify environment variables')
+      console.warn('💡 Add GMAIL_USER and GMAIL_APP_PASSWORD to your environment variables (.env.local for local development)')
       this.gmailTransporter = null
     } else {
       console.log('✅ Gmail credentials found, initializing Gmail transporter...')
@@ -1049,7 +1056,7 @@ export class EmailService {
   }
 
   /**
-   * Send both customer confirmation and admin notification emails
+   * Send admin notification email only (customer emails disabled)
    */
   async sendOrderEmails(
     orderData: OrderData,
@@ -1059,32 +1066,29 @@ export class EmailService {
     customerEmail: EmailResult
     adminEmail: EmailResult
   }> {
-    console.log('📧 Sending order emails...')
+    console.log('📧 Sending admin notification email only...')
 
-    // Send emails in parallel
-    const [customerResult, adminResult] = await Promise.allSettled([
-      this.sendCustomerConfirmation(orderData, orderDbId),
+    // Only send admin email, skip customer email
+    const adminResult = await Promise.allSettled([
       this.sendAdminNotification(orderData, orderDbId, adminEmail)
     ])
 
-    const customerEmail = customerResult.status === 'fulfilled' 
-      ? customerResult.value 
-      : {
-          success: false,
-          message: 'Customer email failed',
-          error: customerResult.reason?.message || 'Unknown error'
-        }
-
-    const adminEmailResult = adminResult.status === 'fulfilled' 
-      ? adminResult.value 
+    const adminEmailResult = adminResult[0].status === 'fulfilled' 
+      ? adminResult[0].value 
       : {
           success: false,
           message: 'Admin email failed',
-          error: adminResult.reason?.message || 'Unknown error'
+          error: adminResult[0].reason?.message || 'Unknown error'
         }
 
+    // Customer email is always skipped
+    const customerEmail = {
+      success: true,
+      message: 'Customer email skipped (disabled by configuration)'
+    }
+
     console.log('📧 Email results:', {
-      customer: customerEmail.success ? '✅ Sent' : '❌ Failed',
+      customer: '⏭️ Skipped',
       admin: adminEmailResult.success ? '✅ Sent' : '❌ Failed'
     })
 

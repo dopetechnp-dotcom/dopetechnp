@@ -192,7 +192,7 @@ async function sendNotificationEmail(orderData: CheckoutData, orderDbId: number,
   try {
     console.log('📧 Sending notification emails for order:', orderDbId)
     
-    // Send both customer confirmation and admin notification emails
+    // Send admin notification email only (customer emails disabled)
     const emailResults = await emailService.sendOrderEmails(
       {
         orderId: orderData.orderId,
@@ -208,7 +208,7 @@ async function sendNotificationEmail(orderData: CheckoutData, orderDbId: number,
 
     // Log results
     if (emailResults.customerEmail.success) {
-      console.log('✅ Customer confirmation email sent successfully')
+      console.log('⏭️ Customer confirmation email skipped (disabled)')
     } else {
       console.warn('⚠️ Customer confirmation email failed:', emailResults.customerEmail.error)
     }
