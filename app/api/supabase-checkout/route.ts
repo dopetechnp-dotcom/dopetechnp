@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { emailService } from '@/lib/email-service'
 
-// Required for static export
-export const dynamic = 'force-dynamic'
-
 interface CheckoutData {
   orderId: string
   customerInfo: {
