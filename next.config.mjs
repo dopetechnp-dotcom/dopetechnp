@@ -23,7 +23,6 @@ const nextConfig = {
   // skipMiddlewareUrlNormalize: true, // Not needed for Vercel
   // Exclude API routes from static export
   experimental: {
-    excludeDefaultMomentLocales: false,
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   },
   eslint: {
